@@ -9,8 +9,8 @@ static int nColor = 3;  // number of colors, SU(N)
 
 class Qcu {
  protected:
-  QcuLattDesc lattDesc;
-  QcuProcDesc procDesc;
+  QcuLattDesc<4> lattDesc;
+  QcuProcDesc<4> procDesc;
 
  public:
   Qcu(QcuGrid_t *pLattDesc, QcuParam *pProcDesc) : lattDesc(pLattDesc), procDesc(pProcDesc) {}
