@@ -2,6 +2,9 @@
 
 #include <chrono>
 
+#define OUTPUT_TIME
+
+#ifdef OUTPUT_TIME
 // timer for host functions
 #define TIMER(func)                                                                                                 \
   do {                                                                                                              \
@@ -20,3 +23,14 @@
       func;                                            \
     }                                                  \
   } while (0)
+#else
+
+#define TIMER(func) \
+  do {              \
+    func;           \
+  } while (0)
+#define TIMER_SPECIFITIMER_SPECIFIC_ITER(func, realIter, timerIter) \
+  do {                                                              \
+    func;                                                           \
+  } while (0)
+#endif
