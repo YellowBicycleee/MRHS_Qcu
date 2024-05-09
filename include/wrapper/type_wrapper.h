@@ -1,4 +1,5 @@
 #pragma once
+#include <cuda_fp16.h>  // half
 #include <basic_data/qcu_complex.cuh>
 
 #include "qcu_enum.h"
