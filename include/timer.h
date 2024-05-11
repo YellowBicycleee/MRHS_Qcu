@@ -7,7 +7,6 @@
 #ifdef OUTPUT_TIME
 // timer for host functions
 
-
 // TIMER 对某个程序段/函数调用进行计时
 // TIMER_SPECIFIC_ITER 对某个程序段/函数调用进行计时，但是只在特定的迭代次数时进行计时(如CG算法只在第10轮进行计算)
 #define TIMER(func)                                                                                                 \
@@ -29,12 +28,8 @@
   } while (0)
 #else
 
-#define TIMER(func) \
-  do {              \
-    func;           \
-  } while (0)
-#define TIMER_SPECIFITIMER_SPECIFIC_ITER(func, realIter, timerIter) \
-  do {                                                              \
-    func;                                                           \
-  } while (0)
+#define TIMER(func) func
+
+#define TIMER_SPECIFITIMER_SPECIFIC_ITER(func, realIter, timerIter) func
+
 #endif
