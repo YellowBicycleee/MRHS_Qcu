@@ -38,7 +38,7 @@ class Dirac {
   virtual void DslashXpay() = 0;
 };
 
-class DiracWilson : Dirac {
+class DiracWilson : public Dirac {
  public:
   DiracWilson(void* gauge, double mass, int nColors, int nInputs, QCU_PRECISION floatPrecision,
               const QcuLattDesc<Nd>& lattDesc, const QcuProcDesc<Nd>& procDesc, DSLASH_TYPE dslashType,
