@@ -1,20 +1,47 @@
 #include <cuda.h>
 
 #include "qcu.h"
-#include "qcuDesc/qcuDesc.h"
-
+#include "qcuDesc/qcu_desc.h"
+#include "qcu_dirac.h"
+#include "qcu_enum.h"
+#include "qcu_kernel_param.cuh"
 namespace qcu {
 
 static int nColor = 3;  // number of colors, SU(N)
+static ExecutionStreams gpuStreams;
 
 class Qcu {
- protected:
-  QcuLattDesc<4> lattDesc;
-  QcuProcDesc<4> procDesc;
+  //  protected:
+  //   DSLASH_TYPE dslashType_;
+  QcuLattDesc<4> lattDesc_;
+  QcuProcDesc<4> procDesc_;
+  //   Dslash *dslash;  // dslash operator
+  Dirac *dirac;
 
  public:
-  Qcu(QcuGrid_t *pLattDesc, QcuParam *pProcDesc) : lattDesc(pLattDesc), procDesc(pProcDesc) {}
-  ~Qcu() {}
+  Qcu(QcuParam *pLattDesc, QcuGrid *pProcDesc) : lattDesc_(pLattDesc), procDesc_(pProcDesc), dirac(nullptr) {}
+  void getDslash(DSLASH_TYPE dslashType, void *gauge, double mass, int nColors, int nInputs,
+                 QCU_PRECISION floatPrecision) {
+    switch (dslashType) {
+      case DSLASH_WILSON: {
+        dirac = new DiracWilson(gauge, mass, nColors, nInputs, floatPrecision, lattDesc_, procDesc_, dslashType,
+                                gpuStreams);
+      } break;
+      default:
+        errorQcu("Now we only support Wilson dslash.\n");
+        break;
+    }
+  }
+  void qcuDslash(void* outputMRHS, void* inputMRHS, int parity, int daggerFlag) {
+    dirac->Dslash(outputMRHS, inputMRHS, parity, daggerFlag);
+  }
+
+  ~Qcu() {
+    if (dirac) {
+      delete dirac;
+      dirac = nullptr;
+    }
+  }
 };
 
 }  // namespace qcu
