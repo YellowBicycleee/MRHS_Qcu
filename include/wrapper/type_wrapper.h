@@ -22,7 +22,7 @@ struct DaggerFlag<QCU_DAGGER_YES, _Float> {
 };
 
 // float precision
-template <QCU_PRECESION _Precision>
+template <QCU_PRECISION _Precision>
 struct ComplexTypeWrapper {
   using Float = float;
   using Complex = qcu::Complex<float>;

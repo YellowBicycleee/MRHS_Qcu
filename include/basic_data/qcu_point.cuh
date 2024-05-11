@@ -5,13 +5,13 @@
 #include "basic_data/qcu_complex.cuh"
 #include "qcu.h"
 #include "qcu_macro.cuh"
-
+#include "qcu_enum.h"
 #define QCU_PERFORMANCE
 // _Complex keyword reserved for C99, donnot use it
 
 namespace qcu {
 
-template <template <typename> class _QcuComplex, typename _Float>
+template <typename _Float>
 class Point {
  private:
   int x_;
@@ -77,13 +77,13 @@ class Point {
     }
   }
 
-  __device__ __forceinline__ _QcuComplex<_Float> *getCoalescedVectorAddr(void *origin, int Lx, int Ly, int Lz,
+  __device__ __forceinline__ Complex<_Float> *getCoalescedVectorAddr(void *origin, int Lx, int Ly, int Lz,
                                                                          int Lt) const {
-    return static_cast<_QcuComplex<_Float> *>(origin) + (((t_ * Lz + z_) * Ly + y_) * Lx + x_);
+    return static_cast<Complex<_Float> *>(origin) + (((t_ * Lz + z_) * Ly + y_) * Lx + x_);
   }
-  __device__ __forceinline__ _QcuComplex<_Float> *getCoalescedGaugeAddr(void *origin, int direction, int sub_Lx, int Ly,
+  __device__ __forceinline__ Complex<_Float> *getCoalescedGaugeAddr(void *origin, int direction, int sub_Lx, int Ly,
                                                                         int Lz, int Lt, int Nc) const {
-    return static_cast<_QcuComplex<_Float> *>(origin) +
+    return static_cast<Complex<_Float> *>(origin) +
            (direction * 2 + parity_) * sub_Lx * Ly * Lz * Lt * Nc * (Nc - 1) +
            (((t_ * Lz + z_) * Ly + y_) * sub_Lx + x_);
   }
@@ -96,7 +96,7 @@ class Point {
     parity_ = rhs.parity_;
     return *this;
   }
-  __device__ __forceinline__ _QcuComplex<_Float> *getPointClover(_QcuComplex<_Float> *origin, int Lx, int Ly, int Lz,
+  __device__ __forceinline__ Complex<_Float> *getPointClover(Complex<_Float> *origin, int Lx, int Ly, int Lz,
                                                                  int Lt, int Nc) const {
     return origin + (((((parity_ * Lt + t_) * Lz + z_) * Ly + y_) * Lx) + x_) * (Nc * Ns * Nc * Ns / 2);
   }
@@ -108,7 +108,7 @@ class Point {
   /// @param elementNums the number of elements in the vector
   /// @param startPos the start position of the vector
   /// @param stride the distance between two elements
-  __device__ __forceinline__ void getVector(_QcuComplex<_Float> *dst, _QcuComplex<_Float> *ptr, int elementNums,
+  __device__ __forceinline__ void getVector(Complex<_Float> *dst, Complex<_Float> *ptr, int elementNums,
                                             int startPos, int stride) {
     for (int i = 0; i < elementNums; i++) {
       dst[i] = ptr[startPos + i * stride];

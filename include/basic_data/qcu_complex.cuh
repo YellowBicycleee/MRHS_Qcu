@@ -1,16 +1,17 @@
 #pragma once
 
 #include <cstdio>
-template <typename _Float = double>
+namespace qcu {
+// TODO: 修改norm2的含义
+template <typename _Float = float>
 class Complex {
  private:
-  //   typedef double _Float;
   _Float real_;
   _Float imag_;
 
  public:
   // constructors
-  __device__ __host__ __forceinline__ Complex(const double2 &rhs) : real_(rhs.x), imag_(rhs.y) {}
+  // __device__ __host__ __forceinline__ Complex(const double2 &rhs) : real_(rhs.x), imag_(rhs.y) {}
   __device__ __host__ __forceinline__ Complex(_Float real, _Float imag) : real_(real), imag_(imag) {}
   Complex() = default;
   __device__ __host__ __forceinline__ Complex(const Complex &complex) : real_(complex.real_), imag_(complex.imag_) {}
@@ -110,3 +111,5 @@ class Complex {
   }
   __device__ __host__ __forceinline__ void output() const { printf("(%lf + %lfi)", real_, imag_); }
 };
+
+}  // namespace qcu
