@@ -10,9 +10,10 @@ project(QCU LANGUAGES C CXX CUDA) # project name = ${PROJECT_NAME}
 
 add_library(qcu 
     SHARED
-    ${PROJECT_SOURCE_DIR}/src/qcu.cu
+    ${PROJECT_SOURCE_DIR}/src/storage/qcu_storage.cu
     ${PROJECT_SOURCE_DIR}/src/qcd/qcu_wilson.cu   
     ${PROJECT_SOURCE_DIR}/src/qcu_dirac.cu
+    ${PROJECT_SOURCE_DIR}/src/qcu.cu
 )
 
 target_include_directories(qcu 
