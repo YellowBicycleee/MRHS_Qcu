@@ -2,34 +2,16 @@
 #include "basic_data/qcu_complex.cuh"
 namespace qcu {
 namespace kernel {
-// template <typename _Float>
-// static __device__ __forceinline__ void reconstructSU3(Complex<_Float> *su3) {
-//   su3[6] = (su3[1] * su3[5] - su3[2] * su3[4]).conj();
-//   su3[7] = (su3[2] * su3[3] - su3[0] * su3[5]).conj();
-//   su3[8] = (su3[0] * su3[4] - su3[1] * su3[3]).conj();
-// }
-
-// only use this function when dst and src are both register variables
-// template <typename _Float>
-// static __device__ __forceinline__ void copyGauge(Complex<_Float> *dst, Complex<_Float> *src, int Nc) {
-//   for (int i = 0; i < (Nc - 1) * Nc; i++) {
-//     dst[i] = src[i];
-//   }
-//   reconstructSU3(dst);
-// }
-
 // COALESCED MEMORY
 template <typename _Float>
 static __device__ __forceinline__ void loadGauge(Complex<_Float> *u_local, void *gauge_ptr, int direction,
                                                  const Point<_Float> &p, int sub_Lx, int Ly, int Lz, int Lt, int Nc) {
   Complex<_Float> *u = p.getCoalescedGaugeAddr(gauge_ptr, direction, sub_Lx, Ly, Lz, Lt, Nc);
   int half_vol = sub_Lx * Ly * Lz * Lt;
-//   for (int i = 0; i < (Nc - 1) * Nc; i++) {
   for (int i = 0; i < Nc * Nc; i++) {
     u_local[i] = *u;
     u += half_vol;
   }
-//   reconstructSU3(u_local);
 }
 
 // version 2 does not reconstruct the SU3 matrix, only stores the 12 complex numbers
@@ -49,7 +31,7 @@ static __device__ __forceinline__ void storeGauge(void *gauge_ptr, Complex<_Floa
                                                   const Point<_Float> &p, int sub_Lx, int Ly, int Lz, int Lt, int Nc) {
   Complex<_Float> *u = p.getCoalescedGaugeAddr(gauge_ptr, direction, sub_Lx, Ly, Lz, Lt, Nc);
   int half_vol = sub_Lx * Ly * Lz * Lt;
-  for (int i = 0; i < (Nc - 1) * Nc; i++) {
+  for (int i = 0; i < Nc * Nc; i++) {
     *u = u_local[i];
     u += half_vol;
   }
