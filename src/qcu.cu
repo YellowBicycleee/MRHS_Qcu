@@ -10,6 +10,14 @@
 #include "qcu_kernel_param.cuh"
 #include "storage/qcu_storage.h"
 using std::vector;
+#include "timer.h"
+
+// #define DEBUG
+
+// #ifdef DEBUG
+// #undef TIMER
+// #define TIMER(func) func;
+// #endif
 namespace qcu {
 
 static ExecutionStreams gpuStreams;
@@ -20,8 +28,12 @@ class Qcu {
   QcuProcDesc<4> procDesc_;
   //   Dslash *dslash;  // dslash operator
   Dirac *dirac_;
-  vector<void *> fermionIn_queue;
-  vector<void *> fermionOut_queue;
+  vector<void *> fermionIn_queue_;
+  vector<void *> fermionOut_queue_;
+
+  vector<void *> coalesced_fermionIn_queue_;
+  vector<void *> coalesced_fermionOut_queue_;
+
   int nColors_;
   void *localGauge_;
 
@@ -43,40 +55,50 @@ class Qcu {
 
   void startDslash(int parity, int daggerFlag = 0) {
     // copy the input and output fermion pointers to the corresponding arrays
-    // void *outputMRHS_ptr = static_cast<void *>(fermionOut_queue.data());
-    // void *inputMRHS_ptr = static_cast<void *>(fermionIn_queue.data());
+    int inputNum = coalesced_fermionIn_queue_.size();
+    void *outputMRHS_ptr = static_cast<void *>(coalesced_fermionOut_queue_.data());
+    void *inputMRHS_ptr = static_cast<void *>(coalesced_fermionIn_queue_.data());
 
-    vector<void *> coalescedOutputMRHS(fermionOut_queue.size());
-    vector<void *> coalescedInputMRHS(fermionIn_queue.size());
-    for (int i = 0; i < fermionOut_queue.size(); i++) {
-      CHECK_CUDA(cudaMalloc(&coalescedOutputMRHS[i], 2 * sizeof(double) * lattDesc_.X() / 2 * lattDesc_.Y() *
-                                                         lattDesc_.Z() * lattDesc_.T() * Ns * nColors_));
-      CHECK_CUDA(cudaMalloc(&coalescedInputMRHS[i], 2 * sizeof(double) * lattDesc_.X() / 2 * lattDesc_.Y() *
-                                                        lattDesc_.Z() * lattDesc_.T() * Ns * nColors_));
-      storage::shiftVectorStorage(coalescedInputMRHS[i], fermionIn_queue[i], TO_COALESCE, lattDesc_.X() / 2,
-                                  lattDesc_.Y(), lattDesc_.Z(), lattDesc_.T());
+    dirac_->Dslash(outputMRHS_ptr, inputMRHS_ptr, parity, daggerFlag, fermionOut_queue_.size());
+
+    for (int i = 0; i < inputNum; i++) {
+      storage::shiftVectorStorage(fermionOut_queue_[i], coalesced_fermionOut_queue_[i], TO_NON_COALESCE,
+                                  lattDesc_.X() / 2, lattDesc_.Y(), lattDesc_.Z(), lattDesc_.T());
     }
-    void *outputMRHS_ptr = static_cast<void *>(coalescedOutputMRHS.data());
-    void *inputMRHS_ptr = static_cast<void *>(coalescedInputMRHS.data());
-
-    dirac_->Dslash(outputMRHS_ptr, inputMRHS_ptr, parity, daggerFlag, fermionOut_queue.size());
-
-    for (int i = 0; i < fermionIn_queue.size(); i++) {
-      storage::shiftVectorStorage(fermionOut_queue[i], coalescedOutputMRHS[i], TO_NON_COALESCE, lattDesc_.X() / 2,
-                                  lattDesc_.Y(), lattDesc_.Z(), lattDesc_.T());
-      CHECK_CUDA(cudaFree(coalescedOutputMRHS[i]));
-      CHECK_CUDA(cudaFree(coalescedInputMRHS[i]));
+    for (int i = 0; i < coalesced_fermionIn_queue_.size(); i++) {
+      void *fIn = coalesced_fermionIn_queue_[i];
+      void *fOut = coalesced_fermionOut_queue_[i];
+      CHECK_CUDA(cudaFree(fIn));
+      CHECK_CUDA(cudaFree(fOut));
+      coalesced_fermionIn_queue_[i] = nullptr;
+      coalesced_fermionOut_queue_[i] = nullptr;
     }
-    fermionIn_queue.clear();
-    fermionOut_queue.clear();
+
+#ifdef DEBUG
+    printf("memory shift Over\n");
+#endif
+    fermionIn_queue_.clear();
+    fermionOut_queue_.clear();
+    coalesced_fermionIn_queue_.clear();
+    coalesced_fermionOut_queue_.clear();
   }
+
   void pushFermion(void *fermionOut, void *fermionIn) {
-    fermionIn_queue.push_back(fermionIn);
-    fermionOut_queue.push_back(fermionOut);
+    int halfVol = lattDesc_.X() / 2 * lattDesc_.Y() * lattDesc_.Z() * lattDesc_.T();
+    int halfVectorLength = halfVol * Ns * nColors_;
+    void *fIn;
+    void *fOut;
+    CHECK_CUDA(cudaMalloc(&fIn, 2 * sizeof(double) * halfVectorLength));
+    CHECK_CUDA(cudaMalloc(&fOut, 2 * sizeof(double) * halfVectorLength));
+    storage::shiftVectorStorage(fIn, fermionIn, TO_COALESCE, lattDesc_.X() / 2, lattDesc_.Y(), lattDesc_.Z(),
+                                lattDesc_.T());
+    coalesced_fermionIn_queue_.push_back(fIn);
+    coalesced_fermionOut_queue_.push_back(fOut);
+    fermionIn_queue_.push_back(fermionIn);
+    fermionOut_queue_.push_back(fermionOut);
   }
   void loadGauge(void *gauge) {
     if (localGauge_ == nullptr) {
-      //   errorQcu("Gauge is already loaded.\n");
       CHECK_CUDA(cudaMalloc(&localGauge_, 2 * sizeof(double) * lattDesc_.X() * lattDesc_.Y() * lattDesc_.Z() *
                                               lattDesc_.T() * Nd * nColors_ * nColors_));
     }
@@ -86,9 +108,12 @@ class Qcu {
 
   ~Qcu() {
     if (dirac_) {
-      CHECK_CUDA(cudaFree(localGauge_));
       delete dirac_;
       dirac_ = nullptr;
+    }
+    if (localGauge_ != nullptr) {
+      CHECK_CUDA(cudaFree(localGauge_));
+      localGauge_ = nullptr;
     }
   }
 };
@@ -101,7 +126,8 @@ void initGridSize(QcuGrid_t *grid, QcuParam *p_param, int nColors) {
   if (qcu_ptr != nullptr) {
     delete qcu_ptr;
     qcu_ptr = nullptr;
-
+    qcu_ptr = new qcu::Qcu(p_param, grid, nColors);
+  } else {
     qcu_ptr = new qcu::Qcu(p_param, grid, nColors);
   }
 }
@@ -120,6 +146,14 @@ void startDslash(int parity, int daggerFlag) {
   qcu_ptr->startDslash(parity, daggerFlag);
 }
 
+void getDslash(int dslashType, void *gauge, double mass, int nColors, int nInputs, int floatPrecision) {
+  if (qcu_ptr == nullptr) {
+    errorQcu("Qcu is not initialized.\n");
+  }
+  qcu_ptr->getDslash(static_cast<DSLASH_TYPE>(dslashType), gauge, mass, nColors, nInputs,
+                     static_cast<QCU_PRECISION>(floatPrecision));
+}
+
 void loadQcuGauge(void *gauge) {
   if (qcu_ptr == nullptr) {
     errorQcu("Qcu is not initialized.\n");
@@ -133,9 +167,17 @@ void fullDslashQcu(void *fermion_out, void *fermion_in, void *gauge, QcuParam *p
 // TODO
 void cg_inverter(void *x_vector, void *b_vector, void *gauge, QcuParam *param, double p_max_prec, double p_kappa) {}
 
+// static void *justTest;
+// __attribute__((constructor)) void initProc() {
+//   cudaMalloc(&justTest, 1024);
+//   printf("in function %s justTest = %p\n", __FUNCTION__ justTest);
+// }
 __attribute__((destructor)) void destroyQcu() {
   if (qcu_ptr != nullptr) {
     delete qcu_ptr;
     qcu_ptr = nullptr;
   }
 }
+//   printf("in function %s justTest = %p\n", __FUNCTION__ justTest);
+//   cudaFree(justTest);
+// }
