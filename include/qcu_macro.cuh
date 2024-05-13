@@ -1,5 +1,5 @@
 #pragma once
-
+#include <cstdio>
 
 // constexpr int Nc = 3;    // Nc isn't defined to 3
 constexpr int Ns = 4;
