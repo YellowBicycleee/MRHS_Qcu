@@ -4,15 +4,17 @@
 #include "qcd/qcu_dslash.h"
 namespace qcu {
 
-using namespace qcu::kernel;
+// using namespace qcu::kernel;
 
 template <typename _Float, int _nColor, int _nInput>
 static inline void executeWilson(MrhsInput<_nInput>& out, MrhsInput<_nInput>& in, void* gauge, _Float daggerFlag,
                                  int Lx, int Ly, int Lz, int Lt, int grid_x, int grid_y, int grid_z, int grid_t,
                                  int parity, int blockSize, cudaStream_t stream) {
   int gridSize = (Lx * Ly * Lz * Lt / 2 + blockSize - 1) / blockSize;
-  dslashKernel<_Float, _nColor, _nInput><<<blockSize, gridSize, 0, stream>>>(out, in, gauge, daggerFlag, Lx, Ly, Lz, Lt,
+  kernel::dslashKernel<_Float, _nColor, _nInput><<<gridSize, blockSize, 0, stream>>>(out, in, gauge, daggerFlag, Lx, Ly, Lz, Lt,
                                                                              grid_x, grid_y, grid_z, grid_t, parity);
+  CHECK_CUDA(cudaGetLastError()); 
+  CHECK_CUDA(cudaDeviceSynchronize());
 }
 
 // TODO: 改blockSize不写死
@@ -80,7 +82,9 @@ inline void instantiateNumInput(const QcuLattDesc<Ndim>& lattDesc, const QcuProc
     } break;
 
     default:
-      errorQcu("Now we only support 1-5 inputs.\n");
+      errorQcu(
+          "Now we only support 1-5 "
+          "inputs.\n");
       break;
   }
 }
@@ -116,7 +120,9 @@ inline void instantiateColor(const QcuLattDesc<Ndim>& lattDesc, const QcuProcDes
     } break;
 
     default:
-      errorQcu("Now we only support 3-8 colors.\n");
+      errorQcu(
+          "Now we only support 3-8 "
+          "colors.\n");
       break;
   }
 }
@@ -126,7 +132,9 @@ inline void instantiatePrec(const QcuLattDesc<Ndim>& lattDesc, const QcuProcDesc
                             QCU_PRECISION floatPrecision, int nColors, int nInputs, ExecutionStreams& gpuStreams) {
   switch (floatPrecision) {
     // case QCU_HALF_PRECISION: {
-    //   instantiateColor<half>(lattDesc, procDesc, parity, daggerFlag, kappa, mrhsFermionIn, mrhsFermionOut,
+    //   instantiateColor<half>(lattDesc,
+    //   procDesc, parity, daggerFlag, kappa,
+    //   mrhsFermionIn, mrhsFermionOut,
     //   pGauge, nColors, nInputs);
     // } break;
     case QCU_SINGLE_PRECISION: {
@@ -135,11 +143,13 @@ inline void instantiatePrec(const QcuLattDesc<Ndim>& lattDesc, const QcuProcDesc
     } break;
     case QCU_DOUBLE_PRECISION: {
       instantiateColor<double>(lattDesc, procDesc, parity, daggerFlag, kappa, mrhsFermionIn, mrhsFermionOut, pGauge,
-                               nColors, nInputs, gpuStreams);;
+                               nColors, nInputs, gpuStreams);
     } break;
 
     default:
-      errorQcu("Now we only support single and double precision.\n");
+      errorQcu(
+          "Now we only support single and "
+          "double precision.\n");
       break;
   }
 }
@@ -155,7 +165,9 @@ void instantiateDslash(const QcuLattDesc<Nd>& lattDesc, const QcuProcDesc<Nd>& p
                       floatPrecision, nColors, nInputs, gpuStreams);
     } break;
     default:
-      errorQcu("Now we only support Wilson dslash.\n");
+      errorQcu(
+          "Now we only support Wilson "
+          "dslash.\n");
       break;
   }
 }
