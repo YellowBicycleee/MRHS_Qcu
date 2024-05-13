@@ -4,6 +4,7 @@
 
 #include "qcu.h"
 #include "qcu_enum.h"
+#include <cstdio>
 // in every process, lattice size desc
 template <int _Ndim>
 struct QcuLattDesc {
