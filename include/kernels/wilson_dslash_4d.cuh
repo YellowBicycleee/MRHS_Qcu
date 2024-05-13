@@ -175,8 +175,8 @@ static __device__ void applyWilson(MrhsInput<_nInput>& outPtrs, MrhsInput<_nInpu
 
   // Z_DIM  FWD
   coordBoundary = (grid_z > 1) ? Lz - 1 : Lz;
-  loadGauge(uLocal, gauge, Z_DIM, p, Lx, Ly, Lz, Lt, _nColor);
-  move_point = p.move(FWD, Z_DIM, Lx, Ly, Lz, Lt);
+  loadGauge(uLocal, gauge, Z_DIM, p, subLx, Ly, Lz, Lt, _nColor);
+  move_point = p.move(FWD, Z_DIM, subLx, Ly, Lz, Lt);
   for (int _ = 0; _ < _nInput; _++) {
     fermionIn = inPtrs[_];
     dstLocal = regDst + _ * Ns * Nc;
