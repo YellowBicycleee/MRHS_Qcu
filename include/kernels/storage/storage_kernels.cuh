@@ -3,8 +3,8 @@
 #include <cstdio>
 
 #include "basic_data/qcu_complex.cuh"
-#include "qcu_macro.cuh"
 #include "qcu_enum.h"
+#include "qcu_macro.cuh"
 #define WARP_SIZE 32
 #define BLOCK_SIZE 256
 
@@ -21,8 +21,8 @@ __global__ void storeVectorCoalesced(void* dstVec, void* srcVec, int subLx, int 
   Complex<_Float>* dstVecPtr;
   Complex<_Float>* srcVecPtr;
 
-  srcVecPtr = static_cast<Complex<_Float>*>(dstVec) + thread_id * Ns * Nc;
-  dstVecPtr = static_cast<Complex<_Float>*>(srcVec) + thread_id * sub_vol;
+  srcVecPtr = static_cast<Complex<_Float>*>(srcVec) + thread_id * Ns * Nc;
+  dstVecPtr = static_cast<Complex<_Float>*>(dstVec) + thread_id;
 
   for (int i = 0; i < Ns * Nc; i++) {
     *dstVecPtr = *srcVecPtr;
@@ -42,7 +42,7 @@ __global__ void storeVectorNonCoalesced(void* dstVec, void* srcVec, int subLx, i
   Complex<_Float>* srcVecPtr;
 
   dstVecPtr = static_cast<Complex<_Float>*>(dstVec) + thread_id * Ns * Nc;
-  srcVecPtr = static_cast<Complex<_Float>*>(srcVec) + thread_id * sub_vol;
+  srcVecPtr = static_cast<Complex<_Float>*>(srcVec) + thread_id;
 
   for (int i = 0; i < Ns * Nc; i++) {
     *dstVecPtr = *srcVecPtr;
@@ -61,14 +61,16 @@ __global__ void storeGaugeCoalesced(void* dst_gauge, void* src_gauge, int Lx, in
 
   Complex<_Float>* dstGaugePtr;
   Complex<_Float>* srcGaugePtr;
-
+  Complex<_Float> temp;
   for (int i = 0; i < Nd; i++) {
     for (int parity = 0; parity < 2; parity++) {
       dstGaugePtr = static_cast<Complex<_Float>*>(dst_gauge) + (2 * i + parity) * sub_vol * Nc * Nc + thread_id;
       srcGaugePtr =
           static_cast<Complex<_Float>*>(src_gauge) + (2 * i + parity) * sub_vol * Nc * Nc + thread_id * Nc * Nc;
       for (int j = 0; j < Nc * Nc; j++) {
+        // temp = *srcGaugePtr;
         *dstGaugePtr = *srcGaugePtr;
+        // *dstGaugePtr = temp;
         dstGaugePtr += sub_vol;
         srcGaugePtr++;
       }
