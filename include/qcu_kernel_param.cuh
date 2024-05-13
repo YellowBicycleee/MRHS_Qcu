@@ -3,6 +3,7 @@
 // #include <cuda.h>
 #include <cuda_runtime.h>
 #include "qcu_macro.cuh"
+#include <cstdio>
 namespace qcu {
 
 struct ExecutionStreams {
