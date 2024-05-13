@@ -14,8 +14,8 @@
     auto start = std::chrono::high_resolution_clock::now();                                                         \
     func;                                                                                                           \
     auto end = std::chrono::high_resolution_clock::now();                                                           \
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();                         \
-    printf("FUNCTION CALL takes %d microseconds, '%s'in file %s line %d: \n", duration, #func, __FILE__, __LINE__); \
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();                         \
+    printf("FUNCTION CALL takes %e seconds, '%s'in file %s line %d: \n", double(duration) / 1e9, #func, __FILE__, __LINE__); \
   } while (0)
 
 #define TIMER_SPECIFIC_ITER(func, realIter, timerIter) \
