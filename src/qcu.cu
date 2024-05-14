@@ -14,10 +14,6 @@ using std::vector;
 
 // #define DEBUG
 
-// #ifdef DEBUG
-// #undef TIMER
-// #define TIMER(func) func;
-// #endif
 namespace qcu {
 
 static ExecutionStreams gpuStreams;
@@ -40,11 +36,17 @@ class Qcu {
  public:
   Qcu(QcuParam *pLattDesc, QcuGrid *pProcDesc, int nColors)
       : lattDesc_(pLattDesc), procDesc_(pProcDesc), dirac_(nullptr), localGauge_(nullptr), nColors_(nColors) {}
-  void getDslash(DSLASH_TYPE dslashType, void *gauge, double mass, int nColors, int nInputs,
-                 QCU_PRECISION floatPrecision) {
+  // TODO: 废弃gauge
+  // void getDslash(DSLASH_TYPE dslashType, void *gauge, double mass, int nColors, int nInputs,
+  //  QCU_PRECISION floatPrecision) {
+  void getDslash(DSLASH_TYPE dslashType, double mass, int nColors, int nInputs, QCU_PRECISION floatPrecision) {
+    if (localGauge_ == nullptr) {
+      errorQcu("localGauge_ is nullptr, not loaded.\n");
+    }
     switch (dslashType) {
       case DSLASH_WILSON: {
-        dirac_ = new DiracWilson(gauge, mass, nColors, floatPrecision, lattDesc_, procDesc_, dslashType, gpuStreams);
+        dirac_ =
+            new DiracWilson(localGauge_, mass, nColors, floatPrecision, lattDesc_, procDesc_, dslashType, gpuStreams);
         // DiracWilson(gauge, mass, nColors, floatPrecision, lattDesc, procDesc, dslashType, streams)
       } break;
       default:
@@ -146,11 +148,14 @@ void startDslash(int parity, int daggerFlag) {
   qcu_ptr->startDslash(parity, daggerFlag);
 }
 
-void getDslash(int dslashType, void *gauge, double mass, int nColors, int nInputs, int floatPrecision) {
+// void getDslash(int dslashType, void *gauge, double mass, int nColors, int nInputs, int floatPrecision) {
+void getDslash(int dslashType, double mass, int nColors, int nInputs, int floatPrecision) {
   if (qcu_ptr == nullptr) {
     errorQcu("Qcu is not initialized.\n");
   }
-  qcu_ptr->getDslash(static_cast<DSLASH_TYPE>(dslashType), gauge, mass, nColors, nInputs,
+  // qcu_ptr->getDslash(static_cast<DSLASH_TYPE>(dslashType), gauge, mass, nColors, nInputs,
+  //                    static_cast<QCU_PRECISION>(floatPrecision));
+  qcu_ptr->getDslash(static_cast<DSLASH_TYPE>(dslashType), mass, nColors, nInputs,
                      static_cast<QCU_PRECISION>(floatPrecision));
 }
 
@@ -167,17 +172,10 @@ void fullDslashQcu(void *fermion_out, void *fermion_in, void *gauge, QcuParam *p
 // TODO
 void cg_inverter(void *x_vector, void *b_vector, void *gauge, QcuParam *param, double p_max_prec, double p_kappa) {}
 
-// static void *justTest;
-// __attribute__((constructor)) void initProc() {
-//   cudaMalloc(&justTest, 1024);
-//   printf("in function %s justTest = %p\n", __FUNCTION__ justTest);
-// }
+
 __attribute__((destructor)) void destroyQcu() {
   if (qcu_ptr != nullptr) {
     delete qcu_ptr;
     qcu_ptr = nullptr;
   }
 }
-//   printf("in function %s justTest = %p\n", __FUNCTION__ justTest);
-//   cudaFree(justTest);
-// }

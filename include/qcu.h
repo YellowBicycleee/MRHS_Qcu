@@ -20,7 +20,8 @@ void initGridSize(QcuGrid_t *grid, QcuParam *p_param, int nColors);
 void pushBackFermions(void *fermionOut, void *fermionIn);  // 押入输入输出向量
 void startDslash(int parity, int daggerFlag);
 void loadQcuGauge(void *gauge);
-void getDslash(int dslashType, void *gauge, double mass, int nColors, int nInputs, int floatPrecision);
+// void getDslash(int dslashType, void *gauge, double mass, int nColors, int nInputs, int floatPrecision); // 废弃
+void getDslash(int dslashType, double mass, int nColors, int nInputs, int floatPrecision);
 // void loadQcuGauge(void *gauge, QcuParam *param); // 废弃
 
 void dslashQcu(void *fermion_out, void *fermion_in, void *gauge, QcuParam *param, int parity);           // 废弃

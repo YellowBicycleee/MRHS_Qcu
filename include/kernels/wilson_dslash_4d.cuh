@@ -58,13 +58,40 @@ static __device__ void applyWilson(MrhsInput<_nInput>& outPtrs, MrhsInput<_nInpu
 
   // X_DIM, FWD
   coordBoundary = (grid_x > 1 && x == subLx - 1 && parity != eo) ? subLx - 1 : subLx;
-  loadGauge(uLocal, gauge, X_DIM, p, subLx, Ly, Lz, Lt, _nColor);
+  loadGauge<_Float>(uLocal, gauge, X_DIM, p, subLx, Ly, Lz, Lt, _nColor);
   move_point = p.move(FWD, X_DIM, subLx, Ly, Lz, Lt);
   for (int _ = 0; _ < _nInput; _++) {
     fermionIn = inPtrs[_];
     dstLocal = regDst + _ * Ns * Nc;
     loadVector<_Float>(srcLocal, fermionIn, move_point, subLx, Ly, Lz, Lt, _nColor);
     if (x < coordBoundary) {
+#pragma unroll
+      for (int i = 0; i < Nc; i++) {
+        temp1 = temp2 = 0;
+
+#pragma unroll
+        for (int j = 0; j < Nc; j++) {
+          temp1 += (srcLocal[0 * Nc + j] - srcLocal[3 * Nc + j].multiply_i() * flag) * uLocal[i * Nc + j];
+          // second row vector with col vector
+          temp2 += (srcLocal[1 * Nc + j] - srcLocal[2 * Nc + j].multiply_i() * flag) * uLocal[i * Nc + j];
+        }
+        dstLocal[0 * Nc + i] += temp1;
+        dstLocal[3 * Nc + i] += temp1.multiply_i() * flag;
+        dstLocal[1 * Nc + i] += temp2;
+        dstLocal[2 * Nc + i] += temp2.multiply_i() * flag;
+      }
+    }
+  }
+
+//   // X_DIM, BWD
+  coordBoundary = (grid_x > 1 && x == 0 && parity == eo) ? 1 : 0;
+  move_point = p.move(BWD, X_DIM, subLx, Ly, Lz, Lt);
+  loadGauge(uLocal, gauge, X_DIM, move_point, subLx, Ly, Lz, Lt, _nColor);
+  for (int _ = 0; _ < _nInput; _++) {
+    fermionIn = inPtrs[_];
+    dstLocal = regDst + _ * Ns * Nc;
+    loadVector<_Float>(srcLocal, fermionIn, move_point, subLx, Ly, Lz, Lt, _nColor);
+    if (x >= coordBoundary) {
 #pragma unroll
       for (int i = 0; i < Nc; i++) {
         temp1 = 0;
@@ -83,33 +110,6 @@ static __device__ void applyWilson(MrhsInput<_nInput>& outPtrs, MrhsInput<_nInpu
         dstLocal[3 * Nc + i] += temp1.multiply_minus_i() * flag;
         dstLocal[1 * Nc + i] += temp2;
         dstLocal[2 * Nc + i] += temp2.multiply_minus_i() * flag;
-      }
-    }
-  }
-
-  // X_DIM, BWD
-  coordBoundary = (grid_x > 1 && x == 0 && parity == eo) ? 1 : 0;
-  move_point = p.move(BWD, X_DIM, subLx, Ly, Lz, Lt);
-  loadGauge(uLocal, gauge, X_DIM, move_point, subLx, Ly, Lz, Lt, _nColor);
-  for (int _ = 0; _ < _nInput; _++) {
-    fermionIn = inPtrs[_];
-    dstLocal = regDst + _ * Ns * Nc;
-    loadVector<_Float>(srcLocal, fermionIn, move_point, subLx, Ly, Lz, Lt, _nColor);
-    if (x >= coordBoundary) {
-#pragma unroll
-      for (int i = 0; i < Nc; i++) {
-        temp1 = temp2 = 0;
-
-#pragma unroll
-        for (int j = 0; j < Nc; j++) {
-          temp1 += (srcLocal[0 * Nc + j] - srcLocal[3 * Nc + j].multiply_i() * flag) * uLocal[i * Nc + j];
-          // second row vector with col vector
-          temp2 += (srcLocal[1 * Nc + j] - srcLocal[2 * Nc + j].multiply_i() * flag) * uLocal[i * Nc + j];
-        }
-        dstLocal[0 * Nc + i] += temp1;
-        dstLocal[3 * Nc + i] += temp1.multiply_i() * flag;
-        dstLocal[1 * Nc + i] += temp2;
-        dstLocal[2 * Nc + i] += temp2.multiply_i() * flag;
       }
     }
   }
