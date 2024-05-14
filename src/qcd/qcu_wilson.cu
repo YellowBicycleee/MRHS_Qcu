@@ -20,7 +20,7 @@ static inline void executeWilson(MrhsInput<_nInput>& out, MrhsInput<_nInput>& in
 // TODO: 改blockSize不写死
 template <typename _Float, int _nColor, int _nInput>
 void WilsonDslash<_Float, _nColor, _nInput>::apply() {
-  int nInput = _nInput;
+  // int nInput = _nInput;
   int nColor = _nColor;
   int blockSize = 256;
 

@@ -61,18 +61,40 @@ __global__ void storeGaugeCoalesced(void* dst_gauge, void* src_gauge, int Lx, in
 
   Complex<_Float>* dstGaugePtr;
   Complex<_Float>* srcGaugePtr;
-  Complex<_Float> temp;
+
   for (int i = 0; i < Nd; i++) {
     for (int parity = 0; parity < 2; parity++) {
       dstGaugePtr = static_cast<Complex<_Float>*>(dst_gauge) + (2 * i + parity) * sub_vol * Nc * Nc + thread_id;
-      srcGaugePtr =
-          static_cast<Complex<_Float>*>(src_gauge) + (2 * i + parity) * sub_vol * Nc * Nc + thread_id * Nc * Nc;
+      srcGaugePtr = static_cast<Complex<_Float>*>(src_gauge) + (2 * i + parity) * sub_vol * Nc * Nc + thread_id * Nc * Nc;
       for (int j = 0; j < Nc * Nc; j++) {
-        // temp = *srcGaugePtr;
         *dstGaugePtr = *srcGaugePtr;
-        // *dstGaugePtr = temp;
         dstGaugePtr += sub_vol;
         srcGaugePtr++;
+      }
+    }
+  }
+}
+
+template <typename _Float, int _nColor>
+__global__ void storeGaugeNonCoalesced(void* dst_gauge, void* src_gauge, int Lx, int Ly, int Lz, int Lt) {
+  constexpr int Nc = _nColor;
+
+  int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+  int sub_Lx = Lx >> 1;
+  int sub_vol = sub_Lx * Ly * Lz * Lt;
+
+  Complex<_Float>* dstGaugePtr;
+  Complex<_Float>* srcGaugePtr;
+
+  for (int i = 0; i < Nd; i++) {
+    for (int parity = 0; parity < 2; parity++) {
+      srcGaugePtr = static_cast<Complex<_Float>*>(src_gauge) + (2 * i + parity) * sub_vol * Nc * Nc + thread_id;
+      dstGaugePtr =
+          static_cast<Complex<_Float>*>(dst_gauge) + (2 * i + parity) * sub_vol * Nc * Nc + thread_id * Nc * Nc;
+      for (int j = 0; j < Nc * Nc; j++) {
+        *dstGaugePtr = *srcGaugePtr;
+        srcGaugePtr += sub_vol;
+        dstGaugePtr++;
       }
     }
   }

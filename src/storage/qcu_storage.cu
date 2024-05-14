@@ -27,8 +27,11 @@ void shiftGaugeStorage(void *dst_vec, void *src_vec, ShiftDirection shift_direct
   int grid_size = (half_vol + block_size - 1) / block_size;
   if (shift_direction == TO_COALESCE) {
     kernel::storeGaugeCoalesced<double, 3><<<grid_size, block_size>>>(dst_vec, src_vec, Lx, Ly, Lz, Lt);
-    CHECK_CUDA(cudaDeviceSynchronize());
+  } else {
+    kernel::storeGaugeNonCoalesced<double, 3><<<grid_size, block_size>>>(dst_vec, src_vec, Lx, Ly, Lz, Lt);
   }
+  CHECK_CUDA(cudaGetLastError());
+  CHECK_CUDA(cudaDeviceSynchronize());
 }
 }  // namespace storage
 }  // namespace qcu
